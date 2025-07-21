@@ -1,0 +1,14 @@
+# Ignore virtual environment
+venv310/
+
+# Ignore JetBrains IDE settings
+.idea/
+
+# Ignore system files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+*.png
+Procfile

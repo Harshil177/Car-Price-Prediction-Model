@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head xmlns="http://www.w3.org/1999/xhtml">
+    <meta charset="UTF-8">
+    <title>Car Price Predictor</title>
+    <link rel="stylesheet" type="text/css"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+            integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+            crossorigin="anonymous"></script>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+          integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+
+    <style>
+        /* Welcome Loader Styles */
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .loader-content {
+            text-align: center;
+            color: white;
+        }
+
+        .car-icon {
+            font-size: 4rem;
+            animation: bounce 2s infinite;
+            margin-bottom: 20px;
+        }
+
+        .loader-text {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-30px);
+            }
+            60% {
+                transform: translateY(-15px);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Main Content Styles */
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 0;
+            margin: 0;
+        }
+
+        .main-content {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.8s ease-out;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .main-content.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .container {
+            max-width: 1200px;
+            animation: slideInUp 1s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            margin: 0 auto;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 40px 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .card-header h1 {
+            margin: 0;
+            font-weight: 300;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+            font-size: 2.5rem;
+        }
+
+        .card-body {
+            padding: 50px 40px;
+        }
+
+        .form-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .form-row {
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            animation: fadeInLeft 0.8s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .form-group:nth-child(1) { animation-delay: 0.1s; }
+        .form-group:nth-child(2) { animation-delay: 0.2s; }
+        .form-group:nth-child(3) { animation-delay: 0.3s; }
+        .form-group:nth-child(4) { animation-delay: 0.4s; }
+        .form-group:nth-child(5) { animation-delay: 0.5s; }
+        .form-group:nth-child(6) { animation-delay: 0.6s; }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            display: block;
+            font-size: 1.1rem;
+        }
+
+        .form-control {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+            height: auto;
+            min-height: 50px;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            padding: 18px 40px;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        #prediction {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 2rem;
+            margin-top: 30px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            background-color: rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        #prediction.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .intro-text {
+            color: #555;
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* Floating elements animation */
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Two column layout for form fields */
+        .form-row-custom {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .form-row-custom .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        /* Single column for specific fields */
+        .form-group-full {
+            width: 100%;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card-body {
+                padding: 30px 20px;
+            }
+            
+            .car-icon {
+                font-size: 3rem;
+            }
+            
+            .loader-text {
+                font-size: 1.2rem;
+            }
+
+            .card-header h1 {
+                font-size: 2rem;
+            }
+
+            .form-row-custom {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .form-row-custom .form-group {
+                margin-bottom: 25px;
+            }
+
+            #prediction {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .card-header {
+                padding: 30px 20px;
+            }
+
+            .card-header h1 {
+                font-size: 1.7rem;
+            }
+
+            .form-control {
+                padding: 14px 16px;
+            }
+
+            .btn-primary {
+                padding: 16px 30px;
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark">
+
+<!-- Welcome Loader -->
+<div class="loader-container" id="loader">
+    <div class="loader-content">
+        <div class="car-icon">
+            <i class="fas fa-car"></i>
+        </div>
+        <div class="loader-text">Welcome to Car Price Predictor</div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content" id="mainContent">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <div class="card mt-50 floating">
+                    <div class="card-header" style="text-align: center">
+                        <h1><i class="fas fa-car-side"></i> Welcome to Car Price Predictor</h1>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-container">
+                            <div class="col-12" style="text-align: center">
+                                <h5 class="intro-text">This app predicts the price of a car you want to sell. Try filling the details below: </h5>
+                            </div>
+                            
+                            <form method="post" accept-charset="utf-8" name="Modelform">
+                                <!-- First Row: Company and Model -->
+                                <div class="form-row-custom">
+                                    <div class="form-group">
+                                        <label><b><i class="fas fa-building"></i> Select the company:</b></label>
+                                        <select class="selectpicker form-control" id="company" name="company" required onchange="updateModels()">
+                                            {% for company in companies %}
+                                            <option value="{{ company }}">{{ company }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><b><i class="fas fa-car"></i> Select the model:</b></label>
+                                        <select class="selectpicker form-control" id="car_models" name="car_models" required>
+                                            <option value="">-- Select Model --</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Second Row: Year and Fuel Type -->
+                                <div class="form-row-custom">
+                                    <div class="form-group">
+                                        <label><b><i class="fas fa-calendar-alt"></i> Select Year of Purchase:</b></label>
+                                        <select class="selectpicker form-control" id="year" name="year" required="1">
+                                            {% for year in years %}
+                                            <option value="{{ year }}">{{ year }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><b><i class="fas fa-gas-pump"></i> Select the Fuel Type:</b></label>
+                                        <select class="selectpicker form-control" id="fuel_type" name="fuel_type" required="1">
+                                            {% for fuel in fuel_types %}
+                                            <option value="{{ fuel }}">{{ fuel }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Third Row: Kilometers (Full Width) -->
+                                <div class="form-group form-group-full">
+                                    <label><b><i class="fas fa-tachometer-alt"></i> Enter the Number of Kilometres that the car has travelled:</b></label>
+                                    <input type="text" class="form-control" id="kilo_driven" name="kilo_driven"
+                                           placeholder="Enter the kilometres driven (e.g., 50000)">
+                                </div>
+
+                                <!-- Submit Button -->
+                                <div class="form-group form-group-full">
+                                    <button class="btn btn-primary form-control" onclick="send_data()">
+                                        <i class="fas fa-magic"></i> Predict Price
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <!-- Prediction Result -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <h4><span id="prediction"></span></h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Loader functionality
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const loader = document.getElementById('loader');
+            const mainContent = document.getElementById('mainContent');
+            
+            loader.style.opacity = '0';
+            setTimeout(function() {
+                loader.style.display = 'none';
+                mainContent.classList.add('show');
+            }, 500);
+        }, 3000); // 3 seconds
+    });
+
+    function load_car_models(company_id,car_model_id)
+    {
+        var company=document.getElementById(company_id);
+        var car_model= document.getElementById(car_model_id);
+        console.log(company.value);
+        car_model.value="";
+        car_model.innerHTML="";
+        {% for company in companies %}
+            if( company.value == "{{ company }}")
+            {
+                {% for model in car_models %}
+                    {% if company in model %}
+
+                        var newOption= document.createElement("option");
+                        newOption.value="{{ model }}";
+                        newOption.innerHTML="{{ model }}";
+                        car_model.options.add(newOption);
+                    {% endif %}
+                {% endfor %}
+            }
+        {% endfor %}
+    }
+
+    function form_handler(event) {
+        event.preventDefault(); // Don't submit the form normally
+    }
+    
+    function send_data()
+    {
+        document.querySelector('form').addEventListener("submit",form_handler);
+
+        var fd=new FormData(document.querySelector('form'));
+
+        var xhr= new XMLHttpRequest({mozSystem: true});
+
+        xhr.open('POST','/predict',true);
+        
+        const predictionElement = document.getElementById('prediction');
+        predictionElement.innerHTML="<i class='fas fa-spinner fa-spin'></i> Wait! Predicting Price.....";
+        predictionElement.classList.add('show');
+        
+        xhr.onreadystatechange = function(){
+            if(xhr.readyState == XMLHttpRequest.DONE){
+                predictionElement.innerHTML="<i class='fas fa-rupee-sign'></i> Prediction: ₹"+xhr.responseText;
+            }
+        };
+
+        xhr.onload= function(){};
+
+        xhr.send(fd);
+    }
+    const modelsByCompany = {{ models_by_company | tojson }};
+    
+    function updateModels() {
+        const selectedCompany = document.getElementById("company").value;
+        const models = modelsByCompany[selectedCompany] || [];
+        const modelDropdown = document.getElementById("car_models");
+
+        modelDropdown.innerHTML = "";
+        models.forEach(model => {
+            const option = document.createElement("option");
+            option.value = model;
+            option.text = model;
+            modelDropdown.appendChild(option);
+        });
+    }
+    window.onload = updateModels;
+</script>
+
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+        integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"
+        integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI"
+        crossorigin="anonymous"></script>
+</body>
+</html>
